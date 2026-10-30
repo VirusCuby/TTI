@@ -1,7 +1,7 @@
 # Contexto del Proyecto — Simulador AR de Circuitos Eléctricos
 
 > Documento de referencia para no perder el hilo entre sesiones de trabajo.
-> Última actualización: 2026-10-30 (simulación eléctrica).
+> Última actualización: 2026-10-30 (simulación eléctrica, guía de pruebas, repositorio GitHub).
 
 ## 000. Sesión 2026-10-30 — cambio de modelos 3D (Batería, LED, Resistencia)
 
@@ -45,6 +45,62 @@ resistencia terminen exactamente en los círculos de gizmo de los Node (si el
 modelo sale espejado o girado 90°, hay que re-exportar); (2) tamaños en el
 diálogo final; (3) Play con la webcam; (4) guardar con Ctrl+S; (5) reconstruir
 el APK. Ojo: la resistencia mide 5.2 cm de alto, puede verse alta.
+
+### 000.e Repositorio en GitHub, tarjetas y pendientes (2026-10-30)
+**Repositorio:** https://github.com/VirusCuby/TTI (público, rama `main`, commit inicial `c0ee171`, 547
+archivos, 46 MB). Se subió el proyecto completo salvo lo siguiente (ver `.gitignore`):
+`Library/`, `Temp/`, `Logs/`, `obj/`, `UserSettings/` (cachés, 5+ GB); `Builds/` y `*.apk`; `Backups/`;
+las carpetas basura anidadas dentro de `Assets/` (copias del 12-sep); `QCAR/`, `build/`, `.utmp/`;
+y **los paquetes del SDK de Vuforia** (`Packages/*.tgz` y `Assets/Editor/Migration/*.tgz`, 131.9 MB
+cada uno: GitHub rechaza archivos de más de 100 MB y es software de terceros). Quien clone debe
+descargar Vuforia 11.4.4 del portal y dejarlo en `Packages/` (explicado en `README.md`).
+**Clave de licencia de Vuforia:** el repo es público, así que en GitHub el archivo
+`Assets/Resources/VuforiaConfiguration.asset` lleva el marcador `PEGA_AQUI_TU_CLAVE_DE_LICENCIA_DE_VUFORIA`
+en `vuforiaLicenseKey` y `ufoLicenseKey`. El archivo real en disco conserva la clave y Git NO lo toca:
+se logró con `git update-index --skip-worktree` sobre esa ruta (el índice tiene una versión sanitizada).
+Si algún día hay que cambiar de verdad ese asset: `git update-index --no-skip-worktree <ruta>`, editar
+sanitizando a mano, y volver a poner `--skip-worktree`. Nunca usar `git add -f` sobre ella.
+**Flujo para subir cambios:** `git add -A` → `git commit -m "..."` → `git push` (Git Credential Manager
+ya está autenticado). No hay GitHub CLI instalado.
+**APK:** quedan en `Builds/` (locales). Idea pendiente: publicarlos como Release de GitHub.
+
+**Tamaño de las tarjetas (respuesta a una duda):** NO tienen que ser cuadradas. Vuforia solo exige que la
+proporción impresa sea la de la imagen subida y que el ancho impreso sea el declarado en el Target
+Manager (hoy 9 cm = `0.09`; el alto sale de la proporción). Pero en este proyecto el 9×9 importa en dos
+sitios: (1) los terminales de la app están a distancias fijas del centro (−3.4 a +4.3 cm sobre la línea
+horizontal de la imagen), así que la tarjeta debe medir ≥ ~9 cm de ancho; (2) las plantillas/posiciones
+de `Guia_de_pruebas/` suponen huellas de 9×9 cm. En la base de datos `marcador_led` es 9×17.7 y
+`marcador_bateria` 9×13.4 (imágenes altas): funcionan pero ocupan más y no encajan en las plantillas.
+**Recomendado:** exportar esas dos imágenes a 1:1, subirlas con ancho 9 cm y bajar la base de datos de nuevo.
+Tarjetas más chicas (p. ej. 6 cm) exigirían escalar en proporción las posiciones de los terminales en Unity
+y recalcular las plantillas.
+**¿Las plantillas valen con las imágenes propias del usuario?** Sí, no dependen del dibujo, sino de: tarjeta
+de 9×9, cuál es el borde de ARRIBA del archivo de imagen (el ▲ de la plantilla) y que los terminales (que
+viven sobre el eje horizontal de la imagen) coincidan con lo dibujado. Si el componente está dibujado en
+vertical en la imagen, el dibujo y los terminales quedan girados 90°. Comprobación rápida: poner una tarjeta
+sola en la app y ver la línea entre sus dos esferas de colores. No se encontraron en el equipo los archivos
+de las tarjetas propias (las de las fotos); no se pudo revisar su arte.
+
+**Estado de verificación:** todo el código compila con el Roslyn de Unity (verificado fuera de Unity) y el
+solver pasa 24/24 casos de Ley de Ohm fuera de Unity. **NO se han corrido las pruebas Edit Mode ni se ha
+probado en el celular** el código de simulación, retos, etiquetas y la regla de conexión nueva. La escena
+`TestAR.unity` guardada es anterior a la herramienta de reemplazo de modelos (no se ha ejecutado).
+
+**Pendientes, en orden recomendado:**
+1. Abrir Unity, revisar la Console y correr el Test Runner (EditMode > Run All; ~25 pruebas).
+2. Ejecutar *Tools > Circuito > Reemplazar modelos (Batería, LED, Resistencia)*, revisar que las patas del LED
+   y la resistencia terminen en los círculos de gizmo de los Node, y guardar la escena (Ctrl+S).
+3. Compilar un APK nuevo y probar en el celular: etiquetas flotantes, panel de retos (posición/tamaño),
+   pulsos en los cables, toque cerca de la resistencia/batería, sonidos, LED quemado.
+4. Imprimir `Guia_de_pruebas/plantillas/Plantillas_A3.pdf` al 100 % y probar las 6 pruebas (las dos en
+   paralelo solo funcionan fiables con plantilla).
+5. Rehacer las tarjetas LED y batería cuadradas (9×9) y/o generar el **set final de tarjetas** (componente
+   dibujado a lo largo del eje de los terminales, marca de "arriba" impresa, fondo con muchos detalles):
+   ataca el problema de reconocimiento y la incoherencia dibujo/terminales.
+6. Panel de diagnóstico en pantalla (FPS y estado de seguimiento por tarjeta) para depurar el reconocimiento.
+7. Ideas a futuro: tarjeta "unión" de 3 terminales (paralelo fiable sin plantilla), esquemático en vivo,
+   tutorial inicial, registro de actividad del estudiante (para la evaluación con compañeros), informe y
+   diapositivas para el profesor, borrar las carpetas basura de `Assets/`, iOS (requiere Mac).
 
 ### 000.d Guía de pruebas y regla de conexión nueva (2026-10-30)
 **Entregable:** `Guia_de_pruebas/GUIA_DE_PRUEBAS.md` + `Guia_de_pruebas/plantillas/` (6 PNG y
