@@ -1,0 +1,52 @@
+# ===== Cachés y archivos que Unity regenera solo (5+ GB, no son trabajo propio) =====
+/Library/
+/Temp/
+/Logs/
+/obj/
+/UserSettings/
+/Build/
+/Builds/
+
+# ===== Archivos de proyecto de IDE (los genera Unity) =====
+*.csproj
+*.sln
+*.suo
+*.user
+*.pidb
+*.unityproj
+.vs/
+.idea/
+
+# ===== Residuos de herramientas =====
+/QCAR/
+/build/
+/.utmp/
+*.log
+
+# ===== Copias de seguridad: Git ya guarda el historial, no hace falta duplicarlo =====
+/Backups/
+
+# ===== Carpetas basura dentro de Assets (copias viejas del 12-sep de Library, Logs, etc.) =====
+/Assets/Assets/
+/Assets/Library/
+/Assets/Logs/
+/Assets/Packages/
+/Assets/ProjectSettings/
+/Assets/Temp/
+/Assets/UserSettings/
+/Assets/Assets.meta
+/Assets/Library.meta
+/Assets/Logs.meta
+/Assets/Packages.meta
+/Assets/ProjectSettings.meta
+/Assets/Temp.meta
+/Assets/UserSettings.meta
+
+# ===== SDK de Vuforia: 131.9 MB cada uno (GitHub rechaza archivos de mas de 100 MB) y es software de terceros =====
+# Descargalo de https://developer.vuforia.com/downloads/sdk (version 11.4.4) y dejalo en Packages/
+/Packages/*.tgz
+/Assets/Editor/Migration/*.tgz
+
+# ===== Compilados (APK/AAB): se publican como Release, no dentro del repositorio =====
+*.apk
+*.aab

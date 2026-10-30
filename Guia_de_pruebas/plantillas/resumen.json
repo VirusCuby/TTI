@@ -1,0 +1,446 @@
+{
+ "C1_basico": {
+  "title": "Prueba 1 - Basico",
+  "sub": "Bateria + interruptor + resistencia + LED, en serie",
+  "cards": [
+   "B",
+   "S1",
+   "R",
+   "L1"
+  ],
+  "rows": [
+   [
+    "B",
+    -10.0,
+    -1.0,
+    270,
+    "derecha",
+    [
+     "+ hacia abajo",
+     "- hacia arriba"
+    ]
+   ],
+   [
+    "S1",
+    0.0,
+    -8.0,
+    0,
+    "arriba",
+    [
+     "A hacia izquierda",
+     "B hacia derecha"
+    ]
+   ],
+   [
+    "R",
+    10.0,
+    0.5,
+    90,
+    "izquierda",
+    [
+     "A hacia abajo",
+     "B hacia arriba"
+    ]
+   ],
+   [
+    "L1",
+    0.0,
+    8.0,
+    180,
+    "abajo",
+    [
+     "+ hacia derecha",
+     "- hacia izquierda"
+    ]
+   ]
+  ],
+  "tight": 1.0,
+  "mid": 1.0,
+  "loose": 0.9874,
+  "extent": [
+   29.0,
+   25.0
+  ],
+  "dmin": 8.08831774845672,
+  "dmax": 9.439242554357843,
+  "file": "layout_C1_basico_tol1.0_s2.5.json"
+ },
+ "C2b_corto3": {
+  "title": "Prueba 2 - Cortocircuito",
+  "sub": "Bateria + 2 interruptores en serie (sin resistencia ni LED)",
+  "cards": [
+   "B",
+   "S1",
+   "S2"
+  ],
+  "rows": [
+   [
+    "B",
+    0.5,
+    -5.5,
+    0,
+    "arriba",
+    [
+     "+ hacia derecha",
+     "- hacia izquierda"
+    ]
+   ],
+   [
+    "S1",
+    7.0,
+    5.5,
+    90,
+    "izquierda",
+    [
+     "A hacia abajo",
+     "B hacia arriba"
+    ]
+   ],
+   [
+    "S2",
+    -7.0,
+    5.0,
+    270,
+    "derecha",
+    [
+     "A hacia arriba",
+     "B hacia abajo"
+    ]
+   ]
+  ],
+  "tight": 1.0,
+  "mid": 0.9438,
+  "loose": 0.7058,
+  "extent": [
+   23.0,
+   20.0
+  ],
+  "dmin": 9.376593197958414,
+  "dmax": 14.000128570838198,
+  "file": "layout_C2b_corto3_tol1.05_s2.0_seed7000.json"
+ },
+ "C3_dos_led": {
+  "title": "Prueba 3 - Dos LED en serie",
+  "sub": "Bateria + interruptor + resistencia + LED 1 + LED 2",
+  "cards": [
+   "B",
+   "S1",
+   "R",
+   "L1",
+   "L2"
+  ],
+  "rows": [
+   [
+    "B",
+    -12.5,
+    -1.5,
+    270,
+    "derecha",
+    [
+     "+ hacia abajo",
+     "- hacia arriba"
+    ]
+   ],
+   [
+    "S1",
+    -0.5,
+    -8.0,
+    0,
+    "arriba",
+    [
+     "A hacia izquierda",
+     "B hacia derecha"
+    ]
+   ],
+   [
+    "R",
+    12.5,
+    -1.5,
+    90,
+    "izquierda",
+    [
+     "A hacia abajo",
+     "B hacia arriba"
+    ]
+   ],
+   [
+    "L1",
+    7.5,
+    8.0,
+    180,
+    "abajo",
+    [
+     "+ hacia derecha",
+     "- hacia izquierda"
+    ]
+   ],
+   [
+    "L2",
+    -3.0,
+    6.5,
+    180,
+    "abajo",
+    [
+     "+ hacia derecha",
+     "- hacia izquierda"
+    ]
+   ]
+  ],
+  "tight": 1.0,
+  "mid": 1.0,
+  "loose": 0.97,
+  "extent": [
+   34.0,
+   25.0
+  ],
+  "dmin": 3.2516495813663564,
+  "dmax": 11.36658699874329,
+  "file": "layout_C3_dos_led_tol1.05_s2.0_seed7000.json"
+ },
+ "C4_and": {
+  "title": "Prueba 4 - Compuerta AND",
+  "sub": "2 interruptores EN SERIE + resistencia + LED",
+  "cards": [
+   "B",
+   "S1",
+   "S2",
+   "R",
+   "L1"
+  ],
+  "rows": [
+   [
+    "B",
+    -12.5,
+    1.5,
+    270,
+    "derecha",
+    [
+     "+ hacia abajo",
+     "- hacia arriba"
+    ]
+   ],
+   [
+    "S1",
+    -5.5,
+    -8.0,
+    0,
+    "arriba",
+    [
+     "A hacia izquierda",
+     "B hacia derecha"
+    ]
+   ],
+   [
+    "S2",
+    4.5,
+    -8.0,
+    0,
+    "arriba",
+    [
+     "A hacia izquierda",
+     "B hacia derecha"
+    ]
+   ],
+   [
+    "R",
+    12.5,
+    1.5,
+    90,
+    "izquierda",
+    [
+     "A hacia abajo",
+     "B hacia arriba"
+    ]
+   ],
+   [
+    "L1",
+    -2.0,
+    8.0,
+    180,
+    "abajo",
+    [
+     "+ hacia derecha",
+     "- hacia izquierda"
+    ]
+   ]
+  ],
+  "tight": 1.0,
+  "mid": 0.9978,
+  "loose": 0.9086,
+  "extent": [
+   34.0,
+   25.0
+  ],
+  "dmin": 5.42,
+  "dmax": 11.974536525477719,
+  "file": "layout_C4_and_tol1.05_s2.0_seed9000.json"
+ },
+ "C5_or": {
+  "title": "Prueba 5 - Compuerta OR",
+  "sub": "2 interruptores EN PARALELO + resistencia + LED",
+  "cards": [
+   "B",
+   "R",
+   "S1",
+   "S2",
+   "L1"
+  ],
+  "rows": [
+   [
+    "B",
+    -10.0,
+    -6.5,
+    180,
+    "abajo",
+    [
+     "+ hacia izquierda",
+     "- hacia derecha"
+    ]
+   ],
+   [
+    "R",
+    -14.5,
+    6.5,
+    90,
+    "izquierda",
+    [
+     "A hacia abajo",
+     "B hacia arriba"
+    ]
+   ],
+   [
+    "S1",
+    14.5,
+    2.0,
+    270,
+    "derecha",
+    [
+     "A hacia arriba",
+     "B hacia abajo"
+    ]
+   ],
+   [
+    "S2",
+    0.0,
+    6.0,
+    270,
+    "derecha",
+    [
+     "A hacia arriba",
+     "B hacia abajo"
+    ]
+   ],
+   [
+    "L1",
+    2.0,
+    -6.0,
+    180,
+    "abajo",
+    [
+     "+ hacia derecha",
+     "- hacia izquierda"
+    ]
+   ]
+  ],
+  "tight": 0.9956,
+  "mid": 0.7196,
+  "loose": 0.3088,
+  "extent": [
+   38.0,
+   22.0
+  ],
+  "dmin": 4.466077025757618,
+  "dmax": 29.32,
+  "file": "layout_C5_or_tol1.05_s2.0.json"
+ },
+ "C6_individual": {
+  "title": "Prueba 6 - Control individual",
+  "sub": "Resistencia compartida + 2 ramas (interruptor + LED) en paralelo",
+  "cards": [
+   "B",
+   "R",
+   "S1",
+   "S2",
+   "L1",
+   "L2"
+  ],
+  "rows": [
+   [
+    "B",
+    2.0,
+    6.5,
+    270,
+    "derecha",
+    [
+     "+ hacia abajo",
+     "- hacia arriba"
+    ]
+   ],
+   [
+    "R",
+    2.0,
+    -5.0,
+    270,
+    "derecha",
+    [
+     "A hacia arriba",
+     "B hacia abajo"
+    ]
+   ],
+   [
+    "S1",
+    -11.5,
+    -8.0,
+    180,
+    "abajo",
+    [
+     "A hacia derecha",
+     "B hacia izquierda"
+    ]
+   ],
+   [
+    "S2",
+    13.0,
+    -4.5,
+    90,
+    "izquierda",
+    [
+     "A hacia abajo",
+     "B hacia arriba"
+    ]
+   ],
+   [
+    "L1",
+    -13.0,
+    8.0,
+    0,
+    "arriba",
+    [
+     "+ hacia izquierda",
+     "- hacia derecha"
+    ]
+   ],
+   [
+    "L2",
+    12.0,
+    7.0,
+    90,
+    "izquierda",
+    [
+     "+ hacia abajo",
+     "- hacia arriba"
+    ]
+   ]
+  ],
+  "tight": 0.9936,
+  "mid": 0.7114,
+  "loose": 0.3046,
+  "extent": [
+   35.0,
+   25.0
+  ],
+  "dmin": 5.6,
+  "dmax": 22.01227384892347,
+  "file": "layout_C6_individual_tol1.05_s2.0_seed6000.json"
+ }
+}
