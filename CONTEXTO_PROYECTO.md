@@ -3,6 +3,24 @@
 > Documento de referencia para no perder el hilo entre sesiones de trabajo.
 > Última actualización: 2026-10-30 (simulación eléctrica, guía de pruebas, repositorio GitHub).
 
+## 0000000. Sesión 2026-11-10 (4) — preparando el APK (pendientes de compilación)
+
+Commit `4fe1dd3` (ya subido a GitHub) = todo el trabajo de hoy: menú, interruptor, tarjetas y base de datos de
+Vuforia ya importada.
+- **Aviso al compilar "Unsupported Input Handling"** (*Active Input Handling = Both* no se recomienda en Android):
+  es solo una advertencia; se puede pulsar Continue. Limpieza pendiente: dejar solo **Input Manager (Old)**, porque
+  todo el código usa el `Input` antiguo (`TapToToggleSwitch`, `MenuController`, `PauseMenu`). Para eso hay que
+  cambiar en `TestAR.unity` el módulo del EventSystem de `InputSystemUIInputModule` a `StandaloneInputModule`
+  (la escena `Menu` ya usa el antiguo); si no, los botones dejarían de responder en `TestAR`. Hacerlo DESPUÉS de
+  la prueba en el celular y no con un build en curso.
+- **"No Android devices connected":** el Galaxy A31 (serie RF8N830D74H) sí se ve en Windows, pero en modo
+  transferencia de archivos y sin interfaz ADB: faltaba activar **Depuración por USB** (Ajustes > Opciones de
+  desarrollador) y aceptar el aviso de autorización. `adb` de Unity: carpeta
+  `Editor/Data/PlaybackEngines/AndroidPlayer/SDK/platform-tools/adb.exe` dentro de la instalación 6000.5.10f1.
+- Pendiente tras compilar: probar las tarjetas nuevas (estrellas >= 4 en el Target Manager), el menú en vertical y
+  horizontal, el botón Salir y la pausa, el flujo de retos, el interruptor animado y las 6 pruebas de
+  `Guia_de_pruebas`.
+
 ## 000000. Sesión 2026-11-10 (3) — tarjetas nuevas con patrones distintos
 
 Para mejorar el reconocimiento y que Vuforia no confunda tarjetas (p. ej. el LED sobre el interruptor) se
