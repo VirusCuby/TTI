@@ -16,6 +16,7 @@ public static class CircuitSounds
 
     private static void Play(ref AudioClip clip, System.Func<AudioClip> make, float volume)
     {
+        if (!AppSettings.SoundEnabled) return;
         if (clip == null) clip = make();
 
         Camera cam = Camera.main;

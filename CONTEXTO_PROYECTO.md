@@ -3,6 +3,84 @@
 > Documento de referencia para no perder el hilo entre sesiones de trabajo.
 > Última actualización: 2026-10-30 (simulación eléctrica, guía de pruebas, repositorio GitHub).
 
+## 000000. Sesión 2026-11-10 (3) — tarjetas nuevas con patrones distintos
+
+Para mejorar el reconocimiento y que Vuforia no confunda tarjetas (p. ej. el LED sobre el interruptor) se
+descartó el QR (poco apto para seguimiento 3D) y VuMark (requiere Illustrator y hay reportes de límites con varias
+instancias simultáneas; queda como plan B). Se rehicieron las 6 tarjetas como Image Targets: carpeta **`Tarjetas/`**
+(`generar_tarjetas.py`, `evaluar_tarjetas.py`, `LEEME.md`, `Marcador_*.png` 1200x1200, `Tarjetas_A4.pdf`).
+- Familias distintas: Batería = triángulos, Resistencia = Voronoi, Interruptor = pistas PCB, Interruptor 2 =
+  burbujas (+ insignia "2"), LED = palitos, LED 2 = camuflaje (+ insignia "2"). Margen blanco 8 %, símbolo sobre el
+  eje con los terminales reales y colores de las esferas, ▲ ARRIBA, cuadradas 9x9.
+- Medición simulada (SIFT+RANSAC, 30 vistas/tarjeta): 96 % bien identificadas vs 51 % de las antiguas.
+- **Falta (lo hace el usuario):** subirlas al Target Manager (mismos nombres en minúsculas, ancho 0.09), revisar
+  estrellas (>=4), bajar la base de datos, importarla, imprimir `Tarjetas_A4.pdf` al 100 % y probar en el celular.
+  Ver `Tarjetas/LEEME.md`. Los PNG antiguos de `Marcadores_Placeholder/` ya no se usan.
+
+## 00000. Sesión 2026-11-10 (2) — menú principal y menú de pausa
+
+El docente pidió que el proyecto tenga un menú (sin requisitos más): se hizo uno **dinámico, vertical y horizontal**.
+**Escritos sin abrir Unity; compilan con Roslyn (Circuit, Menu y Editor), NO se han visto en pantalla ni en el celular.**
+- **Escena aparte `Assets/Scenes/Menu.unity`** (sin Vuforia: la cámara solo se enciende al entrar al simulador `TestAR`).
+  La crea la herramienta **Tools > Circuito > Crear escena de menú y configurar Build** (cámara + EventSystem +
+  `MenuController`; deja Menu = escena 0 y TestAR = escena 1 en Build Settings). **Falta ejecutarla en Unity.**
+- `Assets/Scripts/Menu/` (ensamblado por defecto, usa `Circuit`): `MenuController` (pantallas Principal, Retos,
+  Cómo se usa, Ajustes, Acerca de + pantalla de carga + avisos), `PauseMenu` (botón de 3 rayitas en el borde
+  derecho dentro del simulador: Continuar, Cómo se usa, Sonido, Etiquetas, Reiniciar, Volver al menú; se auto-crea
+  en cualquier escena con `CircuitManager`), `UiKit` (botones/paneles/scroll/degradado generados por código, sin
+  imágenes), `HelpContent` (5 páginas de ayuda, compartidas).
+- **Datos editables** al inicio de `MenuController`: `AppTitle`, `AppTagline`, `University`, `Course`
+  ("X Ciclo · 2026-II · TTI": confirmar), `Members` y `SimulatorScene = "TestAR"`.
+  **Integrantes del grupo** (en "Acerca de"): Liñer Sagastegui Jean Pierre Camilo; Lopez Lozano Serge Jimmy II;
+  Mory Camones Kevin Yared; Olivares Sanchez Sebastian Martin; Ruiz Chimbor Ebert Alejandro.
+- **Salir y flujo de retos (ajuste posterior):** botón rojo **Salir** siempre visible bajo el de pausa (modo libre y
+  retos), con confirmación. Al superar un reto sale un aviso (`UiKit.NewDialog`): **Continuar con los demás retos** /
+  **Salir al menú**; si ya no quedan pendientes: **Reiniciar los retos** / **Salir al menú**. Ya no hay avance
+  automático. El panel de retos (descripción + botón Ocultar/Mostrar) es más alto para que quepan las descripciones
+  largas. Un reto solo cuenta si antes se vio el circuito sin cumplirlo (`armed`), así "Continuar" no resuelve solo
+  el siguiente. En el menú, tocar un reto ya completado pregunta "¿Seguro que quieres empezar el reto N de nuevo?"
+  (el puntaje se conserva; repetirlo se valida de nuevo gracias a `solved`). `UiKit` pasó a `Assets/Scripts/Circuit/`.
+- **Bug corregido (el panel de retos y el botón Salir no aparecían):** `RuntimeInitializeOnLoadMethod` corre UNA
+  sola vez al arrancar la app; al empezar ahora en `Menu` (sin circuito), `ChallengeManager` y `PauseMenu` nunca se
+  creaban al entrar a `TestAR`. Ahora se enganchan a `SceneManager.sceneLoaded`. Regla: todo auto-arranque que
+  dependa de la escena del simulador debe usar `sceneLoaded`, no solo `AfterSceneLoad`.
+- **Play siempre empieza en el menú:** `Assets/Editor/MenuEnEditor.cs` (`[InitializeOnLoad]`) fija
+  `EditorSceneManager.playModeStartScene = Menu` (si no, Play ejecuta la escena abierta, TestAR) y deja Menu como
+  escena 0 en Build Settings. Se apaga/enciende en Tools > Circuito > Play empieza en el menú.
+- **Adaptación:** el Canvas Scaler usa 1080×1920 en vertical y 1920×1080 en horizontal (lado corto siempre 1080);
+  en vertical marca arriba y botones abajo, en horizontal marca a la izquierda y botones a la derecha; respeta el
+  área segura; reacciona al giro en vivo. Escape/Atrás vuelve (en el principal, sale).
+- **Cambios en el código del circuito:** `AppSettings` (nuevo: sonido, etiquetas, `FreeMode`, `SelectedChallenge`);
+  `CircuitSounds` y `ComponentLabel` respetan los ajustes; `ChallengeManager` ahora tiene `Catalog()`, `IsDone`,
+  `CompletedTotal`, `ResetAllProgress`, no se crea en modo libre y abre el reto elegido en el menú.
+- Solo caracteres Latin-1 en los textos de la interfaz (la fuente por defecto de TMP no trae Ω, −, •, →).
+- Prueba nueva: `Assets/Tests/EditMode/MenuDataTests.cs` (sin compilar fuera de Unity).
+**Por hacer en Unity:** ejecutar la herramienta, abrir `Menu` y dar Play (probar también girando la ventana Game:
+elegir una resolución vertical y otra horizontal), revisar la Console, correr el Test Runner, probar en el celular
+(girar, Atrás, Modo libre, un reto, pausa) y reconstruir el APK. Idea opcional: cambiar `productName` en
+Player Settings (hoy "TTI_proyecto") por el nombre que verá el usuario bajo el ícono.
+
+## 0000. Sesión 2026-11-10 — interruptor mejorado (modelo original "Switch Fig" con colores y tecla animada)
+
+El usuario confirmó que la app ya funciona con los modelos nuevos de batería/LED/resistencia. Pidió mejorar el
+interruptor: el "Switch Fig" era gris (el tinte global lo pintaba todo) y no tenía animación. Primero se hizo un
+interruptor de cuchilla desde cero (`Interruptor_cuchilla.fbx`, ya importado en Unity pero **descartado**: el usuario
+prefirió reutilizar el modelo original). Versión vigente: **`Interruptor_balancin.fbx`**.
+**Hecho (sin abrir Unity; compila con Roslyn, falta probarlo en el Editor):**
+- `Switch Fig.fbx` era UNA sola malla (interruptor de balancín, rotada 46° por el objeto). Scripts de Blender en
+  `Nuevos modelos/scripts/` (`build_rocker.py` + `common.py`): se alinea, se parte en regiones por altura
+  (tecla z>1.83 con el fondo cerrado y estirada ×1.5; marco; cuerpo; patas), se escala ×2 y se monta sobre una
+  **placa azul con pistas de cobre y tornillos** que llegan a los terminales A −2.51 / B +2.07 cm.
+- La **tecla** (`Interruptor_Palanca_Tecla`) cuelga de un pivote (`Interruptor_Palanca`) y se inclina 22°; además
+  se tiñe verde (cerrado) / rojo (abierto) con brillo. El resto conserva sus colores.
+- `SwitchVisual.cs` reescrito: gira la palanca con un resorte amortiguado (pequeño rebote) y solo tiñe los
+  renderers indicados. Campos: `leverAxis`, `leverOpenAngle`, `leverStiffness`, `leverDamping`.
+- `ReemplazarModelos.cs`: menú **Tools > Circuito > Reemplazar interruptor (balancín con tecla animada)**; oculta
+  el modelo viejo, instancia el nuevo, asigna materiales, configura `SwitchVisual` (decide solo el signo del giro
+  para que suba el lado +X) y ajusta el collider. Se puede volver a ejecutar (quita el `Nuevo_` anterior).
+**Por hacer en Unity:** ejecutar ese menú, revisar tamaño/posición y que el signo del giro sea correcto, probar el
+toque, Ctrl+S, reconstruir el APK. Después se pueden borrar `Interruptor_cuchilla.fbx` y su `.meta`.
+
 ## 000. Sesión 2026-10-30 — cambio de modelos 3D (Batería, LED, Resistencia)
 
 **Estado:** preparados y copiados a `Assets/Modelos_nuevos/` (`Bateria_9V.fbx`,

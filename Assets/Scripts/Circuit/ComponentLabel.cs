@@ -50,7 +50,7 @@ public class ComponentLabel : MonoBehaviour
     {
         if (comp == null) { Destroy(gameObject); return; }
 
-        bool visible = !hidden && comp.gameObject.activeInHierarchy;
+        bool visible = !hidden && AppSettings.LabelsEnabled && comp.gameObject.activeInHierarchy;
         if (text.enabled != visible) text.enabled = visible;
         if (!visible) return;
 

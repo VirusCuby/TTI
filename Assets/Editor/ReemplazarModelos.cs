@@ -63,6 +63,15 @@ public static class ReemplazarModelos
         { "Resistencia_red",     new Spec(0.16f, 0.01f, 0.00f, 0.00f, 0.45f) },
         { "Resistencia_red_1",   new Spec(0.16f, 0.01f, 0.00f, 0.00f, 0.45f) },
         { "Resistencia_silver",  new Spec(0.65f, 0.62f, 0.45f, 0.80f, 0.55f) },
+
+        // Interruptor de balancín (modelo original "Switch Fig" con colores; se busca por prefijo: ver ObtenerMaterial)
+        { "Interruptor_Base",           new Spec(0.10f, 0.22f, 0.45f, 0.00f, 0.50f) },
+        { "Interruptor_Marco",          new Spec(0.05f, 0.06f, 0.08f, 0.00f, 0.45f) },
+        { "Interruptor_Cuerpo",         new Spec(0.12f, 0.13f, 0.16f, 0.00f, 0.40f) },
+        { "Interruptor_Pata",           new Spec(0.75f, 0.76f, 0.80f, 0.85f, 0.65f) },
+        { "Interruptor_Metal",          new Spec(0.80f, 0.50f, 0.18f, 0.85f, 0.65f) },
+        { "Interruptor_Tornillo",       new Spec(0.75f, 0.76f, 0.80f, 0.85f, 0.65f) },
+        { "Interruptor_Palanca_Tecla",  new Spec(0.50f, 0.50f, 0.50f, 0.00f, 0.60f, emisivo: true) }, // se tiñe verde/rojo desde SwitchVisual
     };
 
     [MenuItem("Tools/Circuito/Reemplazar modelos (Batería, LED, Resistencia)")]
@@ -94,6 +103,29 @@ public static class ReemplazarModelos
         log.AppendLine("\nAhora guarda la escena con Ctrl+S.");
         Debug.Log("[ReemplazarModelos]\n" + log);
         EditorUtility.DisplayDialog("Reemplazo de modelos", log.ToString(), "OK");
+    }
+
+    [MenuItem("Tools/Circuito/Reemplazar interruptor (balancín con tecla animada)")]
+    private static void EjecutarInterruptor()
+    {
+        var log = new StringBuilder();
+        int hechos = 0;
+
+        var componentes = Object.FindObjectsByType<ElectronicComponent>(FindObjectsInactive.Include);
+        foreach (var comp in componentes)
+        {
+            if (comp.type != ComponentType.Switch) continue;
+            if (Reemplazar(comp, "Interruptor_balancin.fbx", log))
+            {
+                hechos++;
+                EditorSceneManager.MarkSceneDirty(comp.gameObject.scene);
+            }
+        }
+
+        log.Insert(0, "Interruptores reemplazados: " + hechos + "\n\n");
+        log.AppendLine("\nAhora guarda la escena con Ctrl+S.");
+        Debug.Log("[ReemplazarModelos]\n" + log);
+        EditorUtility.DisplayDialog("Reemplazo del interruptor", log.ToString(), "OK");
     }
 
     [MenuItem("Tools/Circuito/Volver a los modelos viejos (solo la parte visual)")]
@@ -194,11 +226,16 @@ public static class ReemplazarModelos
         }
 
         // 6) Colliders del *_Modelo: los viejos no coinciden con el modelo nuevo y pueden tapar un toque al interruptor.
-        foreach (var col in raiz.GetComponents<Collider>())
-            Undo.DestroyObjectImmediate(col);
+        //    El interruptor SÍ conserva el suyo (es lo que se toca para abrir/cerrar).
+        if (comp.type != ComponentType.Switch)
+        {
+            foreach (var col in raiz.GetComponents<Collider>())
+                Undo.DestroyObjectImmediate(col);
+        }
 
-        // 7) LED: que solo brille la bombilla.
+        // 7) LED: que solo brille la bombilla. Interruptor: palanca animada e indicador.
         if (comp.type == ComponentType.LED) ConfigurarLed(comp, go);
+        if (comp.type == ComponentType.Switch) ConfigurarInterruptor(comp, go, log);
 
         log.AppendLine("✔ " + comp.name + " → " + go.name + "   tamaño aprox. (cm): " + MedidaCm(go));
         return true;
@@ -242,6 +279,83 @@ public static class ReemplazarModelos
         so.ApplyModifiedProperties();
     }
 
+    /// <summary>
+    /// Conecta SwitchVisual con el modelo nuevo: palanca = "Interruptor_Palanca" (pivote de la tecla),
+    /// indicador = la propia tecla ("Interruptor_Palanca_Tecla", que se tiñe de verde/rojo).
+    /// El signo del giro se decide probando que, al abrir, suba el lado +X de la tarjeta.
+    /// </summary>
+    private static void ConfigurarInterruptor(ElectronicComponent comp, GameObject modelo, StringBuilder log)
+    {
+        var visual = comp.GetComponent<SwitchVisual>();
+        if (visual == null) visual = Undo.AddComponent<SwitchVisual>(comp.gameObject);
+
+        Transform palanca = null;
+        Renderer tecla = null;
+        foreach (var t in modelo.GetComponentsInChildren<Transform>(true))
+            if (t.name == "Interruptor_Palanca") palanca = t;
+        foreach (var r in modelo.GetComponentsInChildren<Renderer>(true))
+            if (r.gameObject.name.StartsWith("Interruptor_Palanca_Tecla")) tecla = r;
+
+        if (palanca == null || tecla == null)
+            log.AppendLine("   ⚠ no se encontró 'Interruptor_Palanca' / la tecla dentro del FBX: solo habrá tinte.");
+
+        // Signo del giro: se prueba +22° y se mira si el lado +X de la tarjeta de la tecla sube; si baja, se invierte.
+        float angulo = 22f;
+        Vector3 eje = Vector3.forward;
+        var mf = tecla != null ? tecla.GetComponent<MeshFilter>() : null;
+        if (palanca != null && mf != null && mf.sharedMesh != null)
+        {
+            Transform tarjeta = comp.transform.parent;
+            Vector3 derecha = tarjeta != null ? tarjeta.right : Vector3.right;
+            Vector3 arriba = tarjeta != null ? tarjeta.up : Vector3.up;
+
+            // esquina de la caja de la tecla más hacia +X de la tarjeta (en reposo)
+            Bounds bb = mf.sharedMesh.bounds;
+            Vector3 esquina = bb.center;
+            float mejor = float.NegativeInfinity;
+            for (int i = 0; i < 8; i++)
+            {
+                Vector3 c = bb.center + Vector3.Scale(bb.extents, new Vector3((i & 1) == 0 ? -1 : 1, (i & 2) == 0 ? -1 : 1, (i & 4) == 0 ? -1 : 1));
+                float d = Vector3.Dot(tecla.transform.TransformPoint(c), derecha);
+                if (d > mejor) { mejor = d; esquina = c; }
+            }
+
+            Quaternion reposo = palanca.localRotation;
+            float altoCerrado = Vector3.Dot(tecla.transform.TransformPoint(esquina), arriba);
+            palanca.localRotation = Quaternion.AngleAxis(angulo, eje) * reposo;
+            float altoAbierto = Vector3.Dot(tecla.transform.TransformPoint(esquina), arriba);
+            palanca.localRotation = reposo;
+            if (altoAbierto < altoCerrado) angulo = -angulo;
+            log.AppendLine("   tecla: eje Z, inclinación al abrir " + angulo + "°");
+        }
+
+        var so = new SerializedObject(visual);
+        so.FindProperty("lever").objectReferenceValue = palanca;
+        so.FindProperty("leverAxis").vector3Value = eje;
+        so.FindProperty("leverOpenAngle").floatValue = angulo;
+        var lista = so.FindProperty("tintRenderers");
+        lista.arraySize = tecla != null ? 1 : 0;
+        if (tecla != null) lista.GetArrayElementAtIndex(0).objectReferenceValue = tecla;
+        so.ApplyModifiedProperties();
+
+        // Zona táctil: que cubra toda la placa y la tecla (valores locales del *_Modelo, escala 0.009).
+        var caja = comp.GetComponent<BoxCollider>();
+        if (caja != null)
+        {
+            Undo.RecordObject(caja, "Collider del interruptor");
+            caja.size = new Vector3(8f, 6f, 4.5f);
+            caja.center = new Vector3(0f, 2.5f, 0f);
+        }
+    }
+
+    private static Vector3 CentroMundo(Renderer r)
+    {
+        var mf = r.GetComponent<MeshFilter>();
+        return mf != null && mf.sharedMesh != null
+            ? r.transform.TransformPoint(mf.sharedMesh.bounds.center)
+            : r.transform.position;
+    }
+
     private static void AsegurarCarpeta()
     {
         if (!AssetDatabase.IsValidFolder(CarpetaMateriales))
@@ -250,7 +364,17 @@ public static class ReemplazarModelos
 
     private static Material ObtenerMaterial(string nombre)
     {
-        if (!Materiales.TryGetValue(nombre, out Spec s)) return null;
+        // Coincidencia exacta; si no, por prefijo más largo (p. ej. "Interruptor_Metal_A" -> "Interruptor_Metal").
+        string clave = nombre;
+        if (!Materiales.ContainsKey(clave))
+        {
+            clave = null;
+            foreach (var k in Materiales.Keys)
+                if (nombre.StartsWith(k) && (clave == null || k.Length > clave.Length)) clave = k;
+            if (clave == null) return null;
+        }
+        Spec s = Materiales[clave];
+        nombre = clave;
 
         string ruta = CarpetaMateriales + "/" + nombre + ".mat";
         var m = AssetDatabase.LoadAssetAtPath<Material>(ruta);

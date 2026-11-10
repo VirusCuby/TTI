@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <QCARConfig>
   <Tracking>
-    <ImageTarget name="marcador_led_2" size="0.090000 0.090000" />
     <ImageTarget name="marcador_interruptor_2" size="0.090000 0.090000" />
-    <ImageTarget name="marcador_led" size="0.090000 0.176614" />
-    <ImageTarget name="marcador_bateria" size="0.090000 0.134262" />
-    <ImageTarget name="marcador_resistencia" size="0.090000 0.090000" />
     <ImageTarget name="marcador_interruptor" size="0.090000 0.090000" />
+    <ImageTarget name="marcador_resistencia" size="0.090000 0.090000" />
+    <ImageTarget name="marcador_led" size="0.090000 0.090000" />
+    <ImageTarget name="marcador_led_2" size="0.090000 0.090000" />
+    <ImageTarget name="marcador_bateria" size="0.090000 0.090000" />
   </Tracking>
 </QCARConfig>

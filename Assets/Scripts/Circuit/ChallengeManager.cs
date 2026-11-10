@@ -5,6 +5,7 @@ using System.Text;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 /// <summary>
@@ -18,14 +19,26 @@ using UnityEngine.UI;
 public class ChallengeManager : MonoBehaviour
 {
     private const string PrefKey = "reto_completado_";
-    private const int PointsPerChallenge = 10;
-    private const float AdvanceDelay = 3.5f;
+    public const int PointsPerChallenge = 10;
+    private const float ExpandedHeight = 450f;   // alto del panel con la descripción visible
 
+    // RuntimeInitializeOnLoadMethod corre UNA sola vez al arrancar la app (ahora en el menú); por eso se
+    // engancha al evento de carga de escena: así se crea cada vez que se entra al simulador.
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    private static void Init()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+        SceneManager.sceneLoaded += OnSceneLoaded;
+        AutoCreate();
+    }
+
+    private static void OnSceneLoaded(Scene scene, LoadSceneMode mode) => AutoCreate();
+
     private static void AutoCreate()
     {
         if (FindAnyObjectByType<ChallengeManager>() != null) return;
         if (FindAnyObjectByType<CircuitManager>() == null) return; // otra escena sin circuito
+        if (AppSettings.FreeMode) return;                          // modo libre: sin retos
         new GameObject("ChallengeManager").AddComponent<ChallengeManager>();
     }
 
@@ -66,7 +79,9 @@ public class ChallengeManager : MonoBehaviour
         public Func<Challenge, Context, string> progress;
         public readonly HashSet<string> seen = new HashSet<string>();
         public readonly Dictionary<string, bool> table = new Dictionary<string, bool>();
-        public bool done;
+        public bool done;    // completado alguna vez (se guarda en el dispositivo)
+        public bool solved;  // superado en este intento (para poder repetir un reto ya completado)
+        public bool armed;   // ya se vio el circuito SIN cumplir el reto (evita que un circuito ya armado lo resuelva solo)
 
         public void ResetProgress() { seen.Clear(); table.Clear(); }
     }
@@ -74,7 +89,7 @@ public class ChallengeManager : MonoBehaviour
     private readonly List<Challenge> challenges = new List<Challenge>();
     private int current;
     private Context lastContext;
-    private bool advancing;
+    private GameObject dialog;   // aviso de reto superado (si está abierto)
 
     // ---- UI ---------------------------------------------------------------
 
@@ -88,7 +103,10 @@ public class ChallengeManager : MonoBehaviour
         BuildChallenges();
         LoadProgress();
         BuildUi();
-        current = FirstPending();
+        // Si el menú eligió un reto, se abre ese; si no, el primero pendiente.
+        int wanted = AppSettings.SelectedChallenge;
+        AppSettings.SelectedChallenge = -1;
+        current = wanted >= 0 && wanted < challenges.Count ? wanted : FirstPending();
         ShowCurrent();
     }
 
@@ -103,13 +121,43 @@ public class ChallengeManager : MonoBehaviour
 
     private void OnDestroy()
     {
+        if (dialog != null) Destroy(dialog);
         if (CircuitManager.Instance != null)
             CircuitManager.Instance.OnCircuitEvaluated -= OnEvaluated;
     }
 
     // ---- Definición de los retos -------------------------------------------
 
-    private void BuildChallenges()
+    private void BuildChallenges() => FillChallenges(challenges);
+
+    // ---- Consulta desde el menú (sin necesitar la escena del simulador) --------
+
+    /// <summary>Título y descripción de cada reto, en orden.</summary>
+    public static List<KeyValuePair<string, string>> Catalog()
+    {
+        var all = new List<Challenge>();
+        FillChallenges(all);
+        var list = new List<KeyValuePair<string, string>>();
+        foreach (var c in all) list.Add(new KeyValuePair<string, string>(c.title, c.description));
+        return list;
+    }
+
+    public static bool IsDone(int index) => PlayerPrefs.GetInt(PrefKey + index, 0) == 1;
+
+    public static int CompletedTotal(int total)
+    {
+        int n = 0;
+        for (int i = 0; i < total; i++) if (IsDone(i)) n++;
+        return n;
+    }
+
+    public static void ResetAllProgress(int total)
+    {
+        for (int i = 0; i < total; i++) PlayerPrefs.DeleteKey(PrefKey + i);
+        PlayerPrefs.Save();
+    }
+
+    private static void FillChallenges(List<Challenge> challenges)
     {
         challenges.Add(new Challenge
         {
@@ -184,7 +232,7 @@ public class ChallengeManager : MonoBehaviour
                 if (x.result.status == CircuitStatus.ReversedPolarity) c.seen.Add("rev");
                 return c.seen.Contains("rev") && x.result.status == CircuitStatus.Closed && x.AnyLit();
             },
-            progress = (c, x) => Mark(c.seen.Contains("rev")) + " LED al revés visto\n" + Mark(c.done) + " LED encendido de nuevo"
+            progress = (c, x) => Mark(c.seen.Contains("rev")) + " LED al revés visto\n" + Mark(c.solved) + " LED encendido de nuevo"
         });
 
         challenges.Add(new Challenge
@@ -196,7 +244,7 @@ public class ChallengeManager : MonoBehaviour
                 if (x.result.burnedLeds.Count > 0) c.seen.Add("burn");
                 return c.seen.Contains("burn") && x.result.status == CircuitStatus.Closed && x.AnyLit();
             },
-            progress = (c, x) => Mark(c.seen.Contains("burn")) + " LED quemado\n" + Mark(c.done) + " LED reemplazado y encendido"
+            progress = (c, x) => Mark(c.seen.Contains("burn")) + " LED quemado\n" + Mark(c.solved) + " LED reemplazado y encendido"
         });
 
         challenges.Add(new Challenge
@@ -297,24 +345,90 @@ public class ChallengeManager : MonoBehaviour
         if (current >= challenges.Count) return;
         var ch = challenges[current];
 
-        if (!ch.done && ch.check(ch, ctx))
+        // check() se ejecuta siempre (va anotando lo observado). Un reto solo cuenta como superado si antes
+        // se vio el circuito sin cumplirlo: así, al pasar al siguiente reto con el circuito ya armado, hay
+        // que hacer algo (cambiar la resistencia, abrir el interruptor...) y no se salta solo.
+        bool met = ch.check(ch, ctx);
+        if (!ch.armed && !met) ch.armed = true;
+        bool success = met && ch.armed && !ch.solved;
+
+        if (success)
         {
+            bool firstTime = !ch.done;
+            ch.solved = true;
             ch.done = true;
             PlayerPrefs.SetInt(PrefKey + current, 1);
             PlayerPrefs.Save();
             CircuitSounds.Success();
-            if (!advancing && current < challenges.Count - 1) StartCoroutine(AdvanceAfterDelay(current));
+            ShowCompletionDialog(firstTime);
         }
 
         RefreshText();
     }
 
-    private IEnumerator AdvanceAfterDelay(int fromIndex)
+    // ---- Aviso al superar un reto ---------------------------------------------------
+
+    /// <summary>
+    /// Al superar un reto: Continuar con el siguiente pendiente o Salir al menú. Si ya no queda ninguno
+    /// pendiente (se completaron todos) ofrece Reiniciar los retos o Salir.
+    /// </summary>
+    private void ShowCompletionDialog(bool firstTime)
     {
-        advancing = true;
-        yield return new WaitForSeconds(AdvanceDelay);
-        advancing = false;
-        if (current == fromIndex) Go(+1);
+        if (dialog != null) return;
+
+        int total = challenges.Count;
+        int done = CompletedCount();
+        int next = NextPending(current);
+        string name = "Reto " + (current + 1) + ": " + challenges[current].title;
+        var buttons = new List<UiKit.DialogButton>();
+        string title, message;
+
+        if (next >= 0)
+        {
+            title = "¡Reto superado!";
+            message = name + "\n" + (firstTime ? "+" + PointsPerChallenge + " puntos. " : "Ya lo habías completado. ") +
+                      "Llevas " + done + " de " + total + " retos.";
+            buttons.Add(new UiKit.DialogButton("Continuar con los demás retos", UiKit.Green, () => { CloseDialog(); GoTo(next); }));
+        }
+        else
+        {
+            title = "¡Completaste todos los retos!";
+            message = "Tienes " + done * PointsPerChallenge + " puntos (" + done + " de " + total + " retos). ¡Felicidades!";
+            buttons.Add(new UiKit.DialogButton("Reiniciar los retos", UiKit.Amber, RestartAll));
+        }
+
+        if (AppSettings.MenuAvailable)
+            buttons.Add(new UiKit.DialogButton("Salir al menú", UiKit.Gray, () => { CloseDialog(); AppSettings.GoToMenu(); }));
+        else
+            buttons.Add(new UiKit.DialogButton("Cerrar", UiKit.Gray, CloseDialog));
+
+        dialog = UiKit.NewDialog(title, message, buttons.ToArray());
+    }
+
+    private void CloseDialog()
+    {
+        if (dialog != null) Destroy(dialog);
+        dialog = null;
+    }
+
+    /// <summary>Borra todo el progreso y vuelve a empezar por el reto 1.</summary>
+    private void RestartAll()
+    {
+        CloseDialog();
+        ResetAllProgress(challenges.Count);
+        foreach (var c in challenges) { c.done = false; c.solved = false; }
+        GoTo(0);
+    }
+
+    /// <summary>Primer reto pendiente después de <paramref name="from"/> (dando la vuelta); -1 si no queda ninguno.</summary>
+    private int NextPending(int from)
+    {
+        for (int i = 1; i <= challenges.Count; i++)
+        {
+            int idx = (from + i) % challenges.Count;
+            if (!challenges[idx].done) return idx;
+        }
+        return -1;
     }
 
     // ---- Navegación -----------------------------------------------------------
@@ -322,7 +436,15 @@ public class ChallengeManager : MonoBehaviour
     private void Go(int delta)
     {
         if (challenges.Count == 0) return;
-        current = (current + delta + challenges.Count) % challenges.Count;
+        GoTo((current + delta + challenges.Count) % challenges.Count);
+    }
+
+    private void GoTo(int index)
+    {
+        if (challenges.Count == 0) return;
+        current = Mathf.Clamp(index, 0, challenges.Count - 1);
+        challenges[current].solved = false;   // se vuelve a validar aunque ya estuviera completado
+        challenges[current].armed = false;
         challenges[current].ResetProgress();
         ShowCurrent();
         if (lastContext != null) OnEvaluated(lastContext.result);
@@ -370,16 +492,14 @@ public class ChallengeManager : MonoBehaviour
         titleText.text = "Reto " + (current + 1) + "/" + challenges.Count + ": " + ch.title + "   (" + stars + ")";
         titleText.color = ch.done ? new Color(0.4f, 1f, 0.5f) : new Color(1f, 0.9f, 0.3f);
 
-        if (ch.done)
+        if (ch.solved)
         {
-            bool last = done == challenges.Count;
-            bodyText.text = last ? "¡Completaste todos los retos! Puedes repetir cualquiera con las flechas."
-                                 : "¡Reto superado! Pasando al siguiente...";
+            bodyText.text = "¡Reto superado!";
             bodyText.color = new Color(0.4f, 1f, 0.5f);
         }
         else
         {
-            bodyText.text = ch.description;
+            bodyText.text = ch.description + (ch.done ? "\n(Ya lo completaste antes.)" : "");
             bodyText.color = Color.white;
         }
 
@@ -405,8 +525,9 @@ public class ChallengeManager : MonoBehaviour
         canvas.sortingOrder = 30;
         var scaler = canvasGo.GetComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1080f, 1920f);
         scaler.matchWidthOrHeight = 0.5f;
+        UiKit.SetReferenceResolution(scaler);                   // vertical u horizontal
+        canvasGo.AddComponent<CanvasOrientationWatcher>().scaler = scaler;
 
         // Panel de abajo
         var panelGo = new GameObject("Panel", typeof(RectTransform), typeof(Image));
@@ -416,7 +537,7 @@ public class ChallengeManager : MonoBehaviour
         panel.anchorMax = new Vector2(1f, 0f);
         panel.pivot = new Vector2(0.5f, 0f);
         panel.anchoredPosition = new Vector2(0f, 20f);
-        panel.sizeDelta = new Vector2(-40f, 400f);
+        panel.sizeDelta = new Vector2(-40f, ExpandedHeight);
         panelGo.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.66f);
 
         // Contenido (se oculta al plegar)
@@ -429,8 +550,8 @@ public class ChallengeManager : MonoBehaviour
         contentRt.offsetMax = Vector2.zero;
 
         titleText = MakeText(panel, "Titulo", 40, FontStyles.Bold, 10f, 56f);
-        bodyText = MakeText(content.transform, "Descripcion", 32, FontStyles.Normal, 78f, 112f);
-        progressText = MakeText(content.transform, "Progreso", 30, FontStyles.Normal, 196f, 104f);
+        bodyText = MakeText(content.transform, "Descripcion", 32, FontStyles.Normal, 78f, 150f);
+        progressText = MakeText(content.transform, "Progreso", 30, FontStyles.Normal, 232f, 104f);
         progressText.color = new Color(0.75f, 0.9f, 1f);
         bodyText.enableAutoSizing = true; bodyText.fontSizeMin = 24; bodyText.fontSizeMax = 32;
         progressText.enableAutoSizing = true; progressText.fontSizeMin = 22; progressText.fontSizeMax = 30;
@@ -445,7 +566,7 @@ public class ChallengeManager : MonoBehaviour
     {
         collapsed = !collapsed;
         content.SetActive(!collapsed);
-        panel.sizeDelta = new Vector2(-40f, collapsed ? 170f : 400f);
+        panel.sizeDelta = new Vector2(-40f, collapsed ? 170f : ExpandedHeight);
         RefreshText();
     }
 
